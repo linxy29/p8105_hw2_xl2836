@@ -4,3 +4,67 @@ author: "Xinyi Lin"
 date: "9/28/2018"
 output: github_document
 ---
+
+# Problem 1
+
+## Read and clean data
+
+Before dealing with data, we need to load related packages and import data.
+
+```{r}
+library(tidyverse)
+```
+
+```{r, message = FALSE}
+NYC_subway_data = read_csv(file = "./data/NYC_Transit_Subway_Entrance_And_Exit_Data.csv")
+
+NYC_subway_data = janitor::clean_names(NYC_subway_data)
+
+head(NYC_subway_data)
+```
+
+Then, we try to select the variables we interested and change the structure of the dataset do that it is easier to analyze.
+
+```{r}
+NYC_subway_clean_data =
+  gather(NYC_subway_data, key = route_number, value = route_name, route1:route11) %>% 
+  separate(route_number, into = c("remove", "route_number"), sep = 5) %>%
+  select(line, station_name, station_latitude, station_longitude, route_number, route_name, entry, entrance_type, vending, ada, ada_notes) %>% 
+  mutate(entry = recode(entry, "YES" = TRUE, "NO" = FALSE))
+
+head(NYC_subway_clean_data)
+```
+
+In the original dataset, there are `r nrow(NYC_subway_data)` observations and `r ncol(NYC_subway_data)` variables. The variables including division and line of subway, name, latitude and longitude of stations, routes served, staff information and related information about entrance ane exit. 
+
+As "route 1" to "route 11" are same kind of variables, we can combine them to turm them and their values into new variables "route_number" and "route_name". Besides, we only interested in information about station, routes, entrance and exit, we chose parts of variables for further analysis, including line, station, name, station latitude / longitude, routes served, entry, vending, entrance type, and ADA compliance. We also convert the entry variable from character (YES vs NO) to a logical variable (the ifelse or recode function may be useful). 
+
+Now the new dataset have `r nrow(NYC_subway_clean_data)` observations and `r ncol(NYC_subway_clean_data)` variables and it is tidier.
+
+## Answering questions
+
+1. There are `r nrow(distinct(NYC_subway_clean_data, line, station_name))` distinct stations which have different station names or lines in the dataset.
+
+1. We define that only those stations which ADA is available are ADA compliant, so those stations with ADA notes like "Check" or "Shuttle not ADA" are not regarded as ADA compliant. There are `r nrow(filter(NYC_subway_clean_data, ada == "TRUE", is.na(ada_notes)))` stations are ADA compliant.
+
+1. As the observation in this dataset have either different entrance loation or different entrance type, we define each observation in this dataset as distinct entrance/exit, so the total number of entrances/exits is `r nrow(NYC_subway_data)` and the number of entrances/exits without vending is `r nrow(filter(NYC_subway_data, vending == "NO"))`. The proportion of entrances/exits without vending is `r nrow(filter(NYC_subway_data, vending == "NO"))/nrow(NYC_subway_data)`.
+
+```{r}
+atrain_stations =
+  filter(NYC_subway_clean_data, route_name == "A") %>% 
+  distinct(line, station_name) %>% 
+  nrow()
+```
+
+```{r}
+ada_atrain_stations =
+  filter(NYC_subway_clean_data, route_name == "A", ada == "TRUE", is.na(ada_notes)) %>% 
+  distinct(line, station_name) %>% 
+  nrow()
+```
+
+1. There are `r atrain_stations` distinct stations serve the A train and `r ada_atrain_stations` of them are ADA compliant.
+
+
+
+
