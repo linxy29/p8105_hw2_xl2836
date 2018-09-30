@@ -65,6 +65,71 @@ ada_atrain_stations =
 
 1. There are `r atrain_stations` distinct stations serve the A train and `r ada_atrain_stations` of them are ADA compliant.
 
+# Problem 2
 
+## The Mr. Trash Wheel sheet
 
+Read and clean data.
 
+```{r}
+library(readxl)
+MrTW_data = 
+  read_excel(path = "./data/HealthyHarborWaterWheelTotals2017-9-26.xlsx") %>% 
+  janitor::clean_names() 
+
+head(MrTW_data)
+
+MrTW_clean_data = 
+  select(MrTW_data, -x_1) %>% 
+  filter(!is.na(dumpster)) %>% 
+  mutate(sports_balls = as.integer(round(sports_balls)))
+
+head(MrTW_clean_data)
+```
+
+## The 2016/2017 precipitation sheet
+
+Read and clean data.
+
+```{r}
+precipitation_2016_data = 
+  read_excel(path = "./data/HealthyHarborWaterWheelTotals2017-9-26.xlsx", 
+                                     sheet = "2016 Precipitation", skip = 1) %>% 
+  janitor::clean_names() 
+
+precipitation_2017_data = 
+  read_excel(path = "./data/HealthyHarborWaterWheelTotals2017-9-26.xlsx", 
+                                     sheet = "2017 Precipitation", skip = 1) %>% 
+  janitor::clean_names() 
+
+precip_2016_clean_data = filter(precipitation_2016_data, !is.na(month), !is.na(total)) %>% 
+  mutate(year = 2016) %>% 
+  select(year, month, total)
+
+head(precip_2016_clean_data)
+
+precip_2017_clean_data = filter(precipitation_2017_data, !is.na(month), !is.na(total)) %>% 
+  mutate(year = 2017) %>% 
+  select(year, month, total)
+
+head(precip_2017_clean_data)
+```
+
+Combine datasets and convert month to a character variable.
+
+```{r}
+precipitation_clean_data = 
+  bind_rows(precip_2016_clean_data, precip_2017_clean_data) %>% 
+  mutate(month = month.abb[month])
+
+head(precipitation_clean_data)
+```
+
+## Overall
+
+```{r}
+MrTW_2016_clean_data = filter(MrTW_clean_data, year == "2016") 
+sports_balls_median = median(MrTW_2016_clean_data$sports_balls)
+```
+
+There are `r nrow(MrTW_clean_data)` observations and `r ncol(MrTW_clean_data)` variables in the `MrTW_clean_data` dataset. The key variables including `dumpster`, `data` and `homes_powered`. There are `r nrow(precipitation_clean_data)` observations and `r ncol(precipitation_clean_data)` variables in the `precipitation_clean_data` dataset. The key variables are `year`,  `month` and `total`. Among them, `r nrow(precip_2016_clean_data)` observations are from 2016, and `r nrow(precip_2017_clean_data)` observations are from 2017.The total precipitation in 2017 is `r sum(precip_2017_clean_data$total)`. The median number of sports balls in a dumpster in 2016 is `r sports_balls_median`.
