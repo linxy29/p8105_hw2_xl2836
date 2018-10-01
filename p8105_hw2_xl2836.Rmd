@@ -23,7 +23,7 @@ NYC_subway_data = janitor::clean_names(NYC_subway_data)
 head(NYC_subway_data)
 ```
 
-Then, we try to select the variables we interested and change the structure of the dataset do that it is easier to analyze.
+Then, we try to select the variables we interested and change the structure of the dataset so that it is easier to analyze.
 
 ```{r}
 NYC_subway_clean_data =
@@ -37,11 +37,11 @@ head(NYC_subway_clean_data)
 
 In the original dataset, there are `r nrow(NYC_subway_data)` observations and `r ncol(NYC_subway_data)` variables. The variables including division and line of subway, name, latitude and longitude of stations, routes served, staff information and related information about entrance ane exit. 
 
-As "route 1" to "route 11" are same kind of variables, we can combine them to turm them and their values into new variables "route_number" and "route_name". Besides, we only interested in information about station, routes, entrance and exit, we chose parts of variables for further analysis, including line, station, name, station latitude / longitude, routes served, entry, vending, entrance type, and ADA compliance. We also convert the entry variable from character (YES vs NO) to a logical variable (the ifelse or recode function may be useful). 
+As "route 1" to "route 11" are same kind of variables, we can combine them to turn them and their values into new variables "route_number" and "route_name". Besides, we only interested in information about station, routes, entrance and exit, we chose parts of variables for further analysis, including line, station, name, station latitude / longitude, routes served, entry, vending, entrance type, and ADA compliance. We also convert the entry variable from character (YES vs NO) to a logical variable. 
 
 Now the new dataset have `r nrow(NYC_subway_clean_data)` observations and `r ncol(NYC_subway_clean_data)` variables and it is tidier.
 
-## Answering questions
+## Answer questions
 
 1. There are `r nrow(distinct(NYC_subway_clean_data, line, station_name))` distinct stations which have different station names or lines in the dataset.
 
@@ -50,20 +50,20 @@ Now the new dataset have `r nrow(NYC_subway_clean_data)` observations and `r nco
 1. As the observation in this dataset have either different entrance loation or different entrance type, we define each observation in this dataset as distinct entrance/exit, so the total number of entrances/exits is `r nrow(NYC_subway_data)` and the number of entrances/exits without vending is `r nrow(filter(NYC_subway_data, vending == "NO"))`. The proportion of entrances/exits without vending is `r nrow(filter(NYC_subway_data, vending == "NO"))/nrow(NYC_subway_data)`.
 
 ```{r}
-atrain_stations =
+Atrain_stations =
   filter(NYC_subway_clean_data, route_name == "A") %>% 
   distinct(line, station_name) %>% 
   nrow()
 ```
 
 ```{r}
-ada_atrain_stations =
+ada_Atrain_stations =
   filter(NYC_subway_clean_data, route_name == "A", ada == "TRUE", is.na(ada_notes)) %>% 
   distinct(line, station_name) %>% 
   nrow()
 ```
 
-1. There are `r atrain_stations` distinct stations serve the A train and `r ada_atrain_stations` of them are ADA compliant.
+There are `r Atrain_stations` distinct stations serve the A train and `r ada_Atrain_stations` of them are ADA compliant.
 
 # Problem 2
 
@@ -133,3 +133,61 @@ sports_balls_median = median(MrTW_2016_clean_data$sports_balls)
 ```
 
 There are `r nrow(MrTW_clean_data)` observations and `r ncol(MrTW_clean_data)` variables in the `MrTW_clean_data` dataset. The key variables including `dumpster`, `data` and `homes_powered`. There are `r nrow(precipitation_clean_data)` observations and `r ncol(precipitation_clean_data)` variables in the `precipitation_clean_data` dataset. The key variables are `year`,  `month` and `total`. Among them, `r nrow(precip_2016_clean_data)` observations are from 2016, and `r nrow(precip_2017_clean_data)` observations are from 2017.The total precipitation in 2017 is `r sum(precip_2017_clean_data$total)`. The median number of sports balls in a dumpster in 2016 is `r sports_balls_median`.
+
+# Problem 3
+
+## Load and clean data
+
+```{r}
+library(p8105.datasets)
+data(brfss_smart2010)
+```
+
+```{r}
+brfss_clean_data = 
+  janitor::clean_names(brfss_smart2010) %>% 
+  filter(topic == "Overall Health") %>% 
+  select(-c(class, topic, question, sample_size, confidence_limit_low:geo_location)) %>% 
+  reshape::rename(c(locationabbr = "location_abbr", locationdesc = "location_desc"))
+
+brfss_spread_data =
+  spread(brfss_clean_data, key = response, value = data_value) %>% 
+  janitor::clean_names() %>% 
+  mutate(high_proportion = excellent + very_good)
+```
+
+## Answer questions
+
+```{r}
+brfss_spread_data$location_abbr %>% 
+  as.factor() %>% 
+  summary() %>% 
+  sort(decreasing = TRUE)
+```
+
+There are `r nrow(distinct(brfss_spread_data, location_desc))` unique locations included in the dataset. As there are `r nrow(distinct(brfss_spread_data, location_abbr))` distinct states included in the dataset, which equals to the number of states in America, every state is represented in the dataset. By changing the `location_abbr` variable into factor and sorting it, we can find the New Jersey is observed most.
+
+```{r}
+brfss_2002_data = 
+  filter(brfss_spread_data, year == 2002) 
+```
+
+
+In 2002, the median of the "Excellent" response value is `r median(brfss_2002_data$excellent)`.
+
+The histogram of "Excellent" response values in the year 2002 is shown below.
+
+```{r}
+ggplot(brfss_2002_data, aes(x = excellent)) +
+  geom_histogram(binwidth = 1)
+```
+
+The scatterplot showing the proportion of "Excellent" response values in New York County and Queen County in each year from 2002 to 2010 is shown below.
+
+```{r}
+brfss_spread_data %>% 
+  filter(location_desc == "NY - Queens County" | location_desc == "NY - New York County") %>% 
+  ggplot(aes(x = year, y = excellent)) +
+  geom_point(aes(color = location_desc))
+```
+
